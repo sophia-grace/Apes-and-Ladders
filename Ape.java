@@ -1,7 +1,11 @@
+// NAME: Sophia Trump
+
+
 /*
- * Created on Feb 12, 2005
+*Created on Feb 12, 2005
  */
 package jungle;
+import java.util.concurrent.*;
 
 /*
  * @author davew
@@ -18,24 +22,70 @@ public class Ape extends Thread {
 	private String _name;
 	private Ladder _ladderToCross;
 	private boolean _goingEast; // if false, going west
+	static int eastCrossing; // tells if an east ape is currently crossing
+	static int westCrossing; // tells if a west ape is currently crossing
+	Semaphore sem; // the semaphore to lock eastCrossing variable
 	
-	public Ape(String name, Ladder toCross, boolean goingEast) {
+	public Ape(String name, Ladder toCross, boolean goingEast, Semaphore sem) {
 		_name = name;
 		_ladderToCross = toCross;
 		_goingEast = goingEast;
+		this.sem = sem;
 	}
 	
 	public void run() {
 		int startRung, move, endRung;
+		
 		System.out.println("Ape " + _name + " starting to go " + (_goingEast?"East.":"West."));
 		if (_goingEast) {
-			startRung = 0;
-			endRung = _ladderToCross.nRungs()-1;
-			move = 1;
-		} else {
-			startRung = _ladderToCross.nRungs()-1;
-			endRung = 0;
-			move = -1;
+			try {
+				// acquiring the lock 
+				sem.acquire(); 
+				eastCrossing+= 1;
+				
+			} catch (InterruptedException exc) { 
+				System.out.println(exc); 
+			} 
+			// release the lock
+			sem.release();
+			
+			// permit has been acquired, so
+			// start and move on the ladder
+			if(westCrossing != 0) { // don't start unless no west apes are crossing 
+				startRung = 0;
+				endRung = _ladderToCross.nRungs()-1;
+				move = 1;
+			}
+			else { // a west ape is crossing, so don't start
+				startRung = 0;
+				endRung = 0;
+				move = 0;
+			} 
+		}
+		 else { // going west
+			try {
+				// acquiring the lock 
+				sem.acquire(); 
+				westCrossing += 1;
+					
+			} catch (InterruptedException exc) { 
+				System.out.println(exc); 
+			} 
+			// release the lock
+			sem.release();
+				
+			// permit has been acquired, so
+			// start and move on the ladder
+			if(eastCrossing != 0) { // don't start unless no east apes are crossing */
+				startRung = 0;
+				endRung = _ladderToCross.nRungs()-1;
+				move = 1;
+			}
+			else { // an east ape is crossing, so don't start
+				startRung = 0;
+				endRung = 0;
+				move = 0;
+			} 
 		}
 		
 		if (debug)
@@ -65,6 +115,21 @@ public class Ape extends Thread {
 		_ladderToCross.releaseRung(endRung);
 		
 		System.out.println("Ape " + _name + " finished going " + (_goingEast?"East.":"West."));
+		
+		// finished crossing, so update the crossing vars via semaphore access
+		try {
+			// acquiring the lock
+			sem.acquire();
+			if(_goingEast) {
+				eastCrossing -= 1; // east ape is done
+			}
+			else {
+				westCrossing -= 1; // west ape is done
+			}
+		} catch (InterruptedException exc) {
+			System.out.print(exc);
+		} 
+		sem.release(); 
 		return;  // survived!
 	}
 }
