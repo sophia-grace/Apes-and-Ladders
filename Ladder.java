@@ -16,7 +16,7 @@ package jungle;
 
 public class Ladder {
 	private int rungCapacity[];
-	
+
 	public Ladder(int _nRungs) {
 		rungCapacity = new int[_nRungs];
 		// capacity 1 available on each rung
