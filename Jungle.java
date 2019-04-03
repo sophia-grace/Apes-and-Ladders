@@ -28,8 +28,8 @@ public class Jungle {
 		//    timing configuration should work, and there should be no way to
 		//    add spurious "tryToSleep"'s *anywhere* to mess it up.
 		//
-		int    eastBound = 20; // how many apes going East? use -1 for inifinity
-		int    westBound = 0; // how many apes going West? use -1 for inifinity
+		int    eastBound = 0; // how many apes going East? use -1 for inifinity
+		int    westBound = 20; // how many apes going West? use -1 for inifinity
 		int    numApes = eastBound + westBound; // the total number of apes
 		double apeMin = 4.0;  // how long to wait between consecutive apes going one way
 		double apeVar = 1.0;  //  4 seconds is usually enough, but vary a bit to see what happens
@@ -53,7 +53,7 @@ public class Jungle {
 		
 		
 		
-		// create arrays of threads (so can later intermix .start of east and west apes)
+	/*	// create arrays of threads (so can later intermix .start of east and west apes)
 		Thread eastThreads[] = new Thread[eastBound];
 		Thread westThreads[] = new Thread[westBound];
 		
@@ -75,19 +75,13 @@ public class Jungle {
 			int i = 0;
 			while(i < westThreads.length) {
 				eastThreads[i].start();
-				//tryToSleep(apeMin, apeVar);
-				
 				westThreads[i].start();
-				//tryToSleep(apeMin, apeVar);
-				
 				i++;
 			}
 			
 			// now start the rest of the east threads
 			while(i < eastThreads.length) {
 				eastThreads[i].start();
-				//tryToSleep(apeMin, apeVar);
-				
 				i++;
 			}
 			
@@ -95,20 +89,14 @@ public class Jungle {
 		else if(eastBound < westBound) {
 			int i = 0;
 			while(i < eastThreads.length) {
-				westThreads[i].start();
-				//tryToSleep(apeMin, apeVar);
-				
+				westThreads[i].start();			
 				eastThreads[i].start();
-				//tryToSleep(apeMin, apeVar);
-				
 				i++;
 			}
 			
 			// now start the rest of the west threads
 			while(i < westThreads.length) {
 				westThreads[i].start();
-				//tryToSleep(apeMin, apeVar);
-				
 				i++;
 			}			
 		}
@@ -116,16 +104,41 @@ public class Jungle {
 			int i = 0;
 			while(i < eastThreads.length) {
 				westThreads[i].start();
-				//tryToSleep(apeMin, apeVar);
-
 				eastThreads[i].start();
-				//tryToSleep(apeMin, apeVar);
-
 				i++;
 			}
-		} 
+		} */
+		
+		
+		// create some Eastbound apes who want that ladder
+				int nRemaining = eastBound;
+				int apeCounter = 1;
+				while (nRemaining != 0) {
+					Ape a = new Ape("E-", apeCounter, l,true, eastwest_sem, rungs_sem);
+					a.start();
+					apeCounter++;
+			
+					if (nRemaining > 0)
+						nRemaining--;
+				}
 
-	}
+	
+				
+				// and create some Westbound apes who want the SAME ladder
+				nRemaining = westBound;
+				apeCounter=1;
+				while (nRemaining != 0) {
+					Ape a = new Ape("W-", apeCounter, l,true, eastwest_sem, rungs_sem);
+					a.start();
+					apeCounter++;
+				
+					if (nRemaining > 0)
+						nRemaining--;
+				}
+			
+
+
+	} 
 
 	private static java.util.Random dice = new java.util.Random(); // random number generator, for delays mostly	
 	public static void tryToSleep(double secMin, double secVar) {
@@ -136,4 +149,3 @@ public class Jungle {
         }
 	}
 }
-

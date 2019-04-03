@@ -44,9 +44,13 @@ public class Ape extends Thread {
 			move = 1;
 		}
 		else {
-			startRung = _ladderToCross.nRungs() - 1;
+			/*startRung = _ladderToCross.nRungs() - 1;
 			endRung = 0;
-			move = -1;
+			move = -1;*/
+			startRung = 0;
+			endRung = _ladderToCross.nRungs() - 1;
+			move = 1;
+			
 		}
 		
 		System.out.println("Ape " + _name + " wants rung " + startRung);
@@ -117,48 +121,26 @@ public class Ape extends Thread {
 			
 			return; //survived!
 		} 
-	/*	else if((!_goingEast) && (eastCrossing == 0)) { //if it is west ape and there are no apes crossing east
+		else if(!(_goingEast) && eastCrossing == 0) { //if it is an west ape and there are no apes crossing east
 			
-			// set the start rung to busy
-			try {
-				// acquiring the lock 
-				rungs_sem.acquire(); 
-				busy_rung[startRung] = true;
-					
-			} catch (InterruptedException exc) { 
-				System.out.println(exc); 
-			} 
-			// release the lock
-			rungs_sem.release();
-						
-			System.out.println("Ape " + _name + "  got  rung " + startRung);			
 			for (int i = startRung+move; i!=endRung+move; i+=move) {
 				Jungle.tryToSleep(rungDelayMin, rungDelayVar);
-				System.out.println("Ape " + _name + " wants rung " + i);
-				
-				// wait for the rung to be able to be grabbed
-				while(busy_rung[i]);
-			
+				System.out.println("Ape " + _name + " wants rung " + i);	
+
 				// check if the rung can be grabbed (that there is no ape on the next rung)
-				if(!busy_rung[i]) {
-				
+				try {
+					rungs_sem[i].acquire();
+					
 					// if the next rung is empty, grab that rung
 					System.out.println("Ape " + _name + "  got  " + i + " releasing " + (i-move));			
 					_ladderToCross.releaseRung(i-move);
-				
-					// set that rung to busy
-					try {
-						// acquiring the lock 
-						rungs_sem.acquire(); 
-						busy_rung[i] = true;
-						busy_rung[i - move] = false;
+							
+					// release the lock on the previous rung
+					rungs_sem[i-move].release();
+				} catch (InterruptedException exc) { 
+					System.out.println(exc); 
+				}	
 					
-					} catch (InterruptedException exc) { 
-						System.out.println(exc); 
-					} 
-					// release the lock
-					rungs_sem.release();
-				}
 				
 				// the rung can't be grabbed, so the ape falls (assumes the above fails)
 				if (!_ladderToCross.grabRung(i)) {
@@ -166,17 +148,8 @@ public class Ape extends Thread {
 					System.out.println("  Ape " + _name + " has been eaten by the crocodiles!");
 					_ladderToCross.releaseRung(i-move); /// so far, we have no way to wait, so release the old lock as we die :-(
 					
-					// set the rung they just fell from to free
-					try {
-						// acquiring the lock 
-						rungs_sem.acquire(); 
-						busy_rung[i - move] = false;
-					
-					} catch (InterruptedException exc) { 
-						System.out.println(exc); 
-					} 
-					// release the lock
-					rungs_sem.release();
+					// release the lock that was dropped from
+					rungs_sem[i].release();
 					
 					return;  //  died
 				}
@@ -190,23 +163,26 @@ public class Ape extends Thread {
 			try {
 				// acquiring the lock
 				eastwest_sem.acquire();
-				westCrossing -= 1; // east ape is done
+				eastCrossing -= 1; // east ape is done
 				
 			} catch (InterruptedException exc) {
 				System.out.print(exc);
 			} 
 			eastwest_sem.release(); 
+			
+			// free up the released rung
+			rungs_sem[endRung].release();
+			
 			return; //survived!
-		} */
+		}
 	}
-	
 	
 	public void run() {
 		
 		if (_goingEast) {
 			// check first if there are apes going west
 			
-			try {
+		/*	try {
 				// acquiring the lock 
 				eastwest_sem.acquire(); 
 				eastCrossing += 1;
@@ -215,7 +191,7 @@ public class Ape extends Thread {
 				System.out.println(exc); 
 			} 
 			// release the lock
-			eastwest_sem.release();
+			eastwest_sem.release(); */
 			
 			// now see if the ape can actually start crossing
 			crossLadder(this);
@@ -223,7 +199,7 @@ public class Ape extends Thread {
 		}
 		 else { // going west
 			 //check first if there are apes going east
-			try {
+		/*	try {
 				// acquiring the lock 
 				eastwest_sem.acquire(); 
 				westCrossing += 1;
@@ -232,7 +208,7 @@ public class Ape extends Thread {
 				System.out.println(exc); 
 			} 
 			// release the lock
-			eastwest_sem.release();
+			eastwest_sem.release(); */
 			
 			// now see if the ape can actually start crossing
 			crossLadder(this);

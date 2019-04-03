@@ -39,5 +39,3 @@ public class Ladder {
 		rungCapacity[which]++;
 	}
 }
-
-
