@@ -1,5 +1,12 @@
 // NAME: Sophia Trump
 
+/* 
+ * Resources used:
+ * https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/Semaphore.html
+ * https://stackoverflow.com/questions/2536692/a-simple-scenario-using-wait-and-notify-in-java
+ * https://www.cs.umd.edu/~hollings/cs412/s96/synch/eastwest.html
+ * http://www.cs.umd.edu/~shankar/412-Notes/15-EastWestBridge.html
+ */
 
 /*
 *Created on Feb 12, 2005
@@ -25,10 +32,11 @@ public class Ape extends Thread {
 	static int westCrossing = 0; // tells if a west ape is currently crossing
 	Semaphore eastwest_sem; // the semaphore to lock eastCrossing variable
 	Semaphore rungs_sem[]; // the semaphore to lock each rung on the ladder
-	Lamport lamport; // use lamport to request CS and avoid deadlock/livelock
+
 	
-	public Ape(String direction, int apeNumber, Ladder toCross, boolean goingEast, Semaphore eastwest_sem, Semaphore rungs_sem[]) {
-		_name = direction + "-" + apeNumber;
+	
+	public Ape(String name, Ladder toCross, boolean goingEast, Semaphore eastwest_sem, Semaphore rungs_sem[]) {
+		_name = name;
 		_ladderToCross = toCross;
 		_goingEast = goingEast;
 		this.eastwest_sem = eastwest_sem;
@@ -44,37 +52,33 @@ public class Ape extends Thread {
 			move = 1;
 		}
 		else {
-			/*startRung = _ladderToCross.nRungs() - 1;
+			startRung = _ladderToCross.nRungs() - 1;
 			endRung = 0;
-			move = -1;*/
-			startRung = 0;
-			endRung = _ladderToCross.nRungs() - 1;
-			move = 1;
-			
+			move = -1;
 		}
 		
 		System.out.println("Ape " + _name + " wants rung " + startRung);
 		
-		
 		// set the start rung to busy
 		try {
-			// acquiring the lock 
+			// acquiring the lock for start
 			rungs_sem[startRung].acquire(); 
-					
+			
 		} catch (InterruptedException exc) { 
 			System.out.println(exc); 
 		} 			
 		System.out.println("Ape " + _name + "  got  rung " + startRung);
 	
 		
-		if(_goingEast && westCrossing == 0) { //if it is an East ape and there are no apes crossing west
+		if(_goingEast) { //if it is an East ape and there are no apes crossing west
 			
 			for (int i = startRung+move; i!=endRung+move; i+=move) {
-				Jungle.tryToSleep(rungDelayMin, rungDelayVar);
+
 				System.out.println("Ape " + _name + " wants rung " + i);	
 
 				// check if the rung can be grabbed (that there is no ape on the next rung)
 				try {
+			
 					rungs_sem[i].acquire();
 					
 					// if the next rung is empty, grab that rung
@@ -97,6 +101,25 @@ public class Ape extends Thread {
 					// release the lock that was dropped from
 					rungs_sem[i].release();
 					
+					// decrement the number of east apes crossing
+					try {
+						// acquiring the lock 
+						eastwest_sem.acquire(); 
+						eastCrossing -= 1;
+						
+						
+					} catch (InterruptedException exc) { 
+						System.out.println(exc); 
+					}
+					eastwest_sem.release();
+					
+					// notify waiting west apes if east apes are not crossing
+					if(eastCrossing == 0) {
+						synchronized(_ladderToCross) {
+							_ladderToCross.notifyAll();
+						}
+					}
+					
 					return;  //  died
 				}
 			}
@@ -105,30 +128,39 @@ public class Ape extends Thread {
 			_ladderToCross.releaseRung(endRung);
 			System.out.println("Ape " + _name + " finished going " + (_goingEast?"East.":"West."));
 			
-			// finished crossing, so update the crossing vars via semaphore access
-			try {
-				// acquiring the lock
-				eastwest_sem.acquire();
-				eastCrossing -= 1; // east ape is done
-				
-			} catch (InterruptedException exc) {
-				System.out.print(exc);
-			} 
-			eastwest_sem.release(); 
-			
 			// free up the released rung
 			rungs_sem[endRung].release();
+			
+			// decrement the number of east apes crossing
+			try {
+				// acquiring the lock 
+				eastwest_sem.acquire(); 
+				eastCrossing -= 1;
+				
+				
+			} catch (InterruptedException exc) { 
+				System.out.println(exc); 
+			}
+			eastwest_sem.release();
+			
+			// notify waiting west apes if east apes are done crossing
+			if(eastCrossing == 0) {
+				synchronized(_ladderToCross) {
+					_ladderToCross.notifyAll();
+				}
+			}
 			
 			return; //survived!
 		} 
-		else if(!(_goingEast) && eastCrossing == 0) { //if it is an west ape and there are no apes crossing east
+		else if(!(_goingEast)) { //if it is an west ape and there are no apes crossing east
 			
 			for (int i = startRung+move; i!=endRung+move; i+=move) {
-				Jungle.tryToSleep(rungDelayMin, rungDelayVar);
+			
 				System.out.println("Ape " + _name + " wants rung " + i);	
 
 				// check if the rung can be grabbed (that there is no ape on the next rung)
 				try {
+					
 					rungs_sem[i].acquire();
 					
 					// if the next rung is empty, grab that rung
@@ -151,6 +183,25 @@ public class Ape extends Thread {
 					// release the lock that was dropped from
 					rungs_sem[i].release();
 					
+					// decrement the number of west apes crossing
+					try {
+						// acquiring the lock 
+						eastwest_sem.acquire(); 
+						westCrossing -= 1;
+						
+						
+					} catch (InterruptedException exc) { 
+						System.out.println(exc); 
+					}
+					eastwest_sem.release();
+					
+					// notify waiting east apes if west apes are done crossing
+					if(westCrossing == 0) {
+						synchronized(_ladderToCross) {
+							_ladderToCross.notifyAll();
+						}
+					}
+					
 					return;  //  died
 				}
 			}
@@ -159,19 +210,29 @@ public class Ape extends Thread {
 			_ladderToCross.releaseRung(endRung);
 			System.out.println("Ape " + _name + " finished going " + (_goingEast?"East.":"West."));
 			
-			// finished crossing, so update the crossing vars via semaphore access
-			try {
-				// acquiring the lock
-				eastwest_sem.acquire();
-				eastCrossing -= 1; // east ape is done
-				
-			} catch (InterruptedException exc) {
-				System.out.print(exc);
-			} 
-			eastwest_sem.release(); 
 			
 			// free up the released rung
 			rungs_sem[endRung].release();
+			
+			// decrement the number of west apes crossing
+			try {
+				// acquiring the lock 
+				eastwest_sem.acquire(); 
+				westCrossing -= 1;
+							
+							
+			} catch (InterruptedException exc) { 
+				System.out.println(exc); 
+			}
+			eastwest_sem.release();
+			
+			
+			// notify waiting east apes if west apes are done crossing
+			if(westCrossing == 0) {
+				synchronized(_ladderToCross) {
+					_ladderToCross.notifyAll();
+				}
+			}
 			
 			return; //survived!
 		}
@@ -180,38 +241,65 @@ public class Ape extends Thread {
 	public void run() {
 		
 		if (_goingEast) {
-			// check first if there are apes going west
 			
-		/*	try {
+			// check first if there are apes going west
+			try {
 				// acquiring the lock 
 				eastwest_sem.acquire(); 
 				eastCrossing += 1;
-				
 			} catch (InterruptedException exc) { 
 				System.out.println(exc); 
-			} 
-			// release the lock
-			eastwest_sem.release(); */
+			}
+			eastwest_sem.release();
 			
-			// now see if the ape can actually start crossing
+			
+			// are there currently west apes crossing?
+			// if yes, wait
+			synchronized(_ladderToCross) {
+				while(westCrossing > 0) {
+					try {
+						_ladderToCross.wait();
+					} catch (InterruptedException exc) {
+						System.out.println(exc);
+					}
+				}
+			}
+			
+			
+			// now actually start crossing
 			crossLadder(this);
+
 			return;
 		}
 		 else { // going west
+			 
 			 //check first if there are apes going east
-		/*	try {
+			try {
 				// acquiring the lock 
 				eastwest_sem.acquire(); 
 				westCrossing += 1;
 					
 			} catch (InterruptedException exc) { 
 				System.out.println(exc); 
-			} 
-			// release the lock
-			eastwest_sem.release(); */
+			}  
+			eastwest_sem.release();
 			
-			// now see if the ape can actually start crossing
+			
+			// are there currently east apes crossing?
+			// if yes, wait
+			synchronized(_ladderToCross) {
+				while(eastCrossing > 0) {
+					try {
+						_ladderToCross.wait();
+					} catch (InterruptedException exc) {
+						System.out.println(exc);
+					}
+				}
+			} 
+				
+			// now actually start crossing
 			crossLadder(this);
+		
 			return;
 		}
 		
