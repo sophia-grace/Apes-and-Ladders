@@ -59,6 +59,12 @@ public class Ape extends Thread {
 	
 		System.out.println("\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " wants rung " + startRung);
 
+		/* 
+		 * INVARIANT: only 1 ape can acquire the start rung at a time. 
+		 * Other apes must wait in the semaphore until the start rung is "released".
+		 * The apes will eventually acquire the rung (see logic below related to releasing the semaphore).
+		 * */
+		
 		// set the start rung to busy
 		try {
 			// acquiring the lock for start
@@ -69,23 +75,54 @@ public class Ape extends Thread {
 
 		System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + "  got  rung " + startRung);
 
-		if(_goingEast) { //if it is an East ape and there are no apes crossing west
-			for (int i = startRung+move; i!=endRung+move; i+=move) {
+			/*
+			 * INVARIANT: the ape will finish crossing the ladder.
+			 * This logic comes from the for loop going from the startRung to the endRung, 
+			 * combined with the logic presented below about the rungs semaphore.
+			 */
+			
+		for (int i = startRung+move; i!=endRung+move; i+=move) {
 				System.out.println("\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " wants rung " + i);	
 
 				// check if the rung can be grabbed (that there is no ape on the next rung)
 				try {
+					
+					/*
+					 * INVARIANT: only 1 ape is on a given rung at a time.
+					 * Apes will wait until the next rung they want is free (given by the semaphore).
+					 * Apes will eventually get that rung (see the next invariant).
+					 */
+					
+					/*
+					 * INVARIANT: The first ape crossing will always have available its next rung.
+					 * This logic comes from the invariant that apes traveling opposing directions
+					 * will never be on the ladder at the same time (see invariants in the run() method).
+					 */
+					
 					rungs_sem[i].acquire();
 
 					// if the next rung is empty, grab that rung
 					System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + "  got  " + i + " releasing " + (i-move));			
 					_ladderToCross.releaseRung(i-move);
 
+					
+					/* 
+					 * INVARIANT: Apes that want a rung that is busy will eventually get that rung.
+					 * Once an ape has moved to its next rung, it always releases the previous,
+					 * allowing apes waiting to access that rung to gain access to it via its semaphore.
+					 */
+					
 					// release the lock on the previous rung
 					rungs_sem[i-move].release();
 				} catch (InterruptedException exc) { 
 					System.out.println(exc); 
 				}	
+				
+				
+				/*
+				 * INVARIANT: This section of code (the following if statement) will never be needed.
+				 * From the invariants above, apes will always wait to grab the next rung until it is actually free.
+				 */
 				
 				// the rung can't be grabbed, so the ape falls (assumes the above fails)
 				if (!_ladderToCross.grabRung(i)) {
@@ -100,22 +137,43 @@ public class Ape extends Thread {
 					try {
 						// acquiring the lock 
 						eastwest_sem.acquire(); 
-						eastCrossing -= 1;
+						if(_goingEast) {
+							eastCrossing -= 1;
+						}
+						else {
+							westCrossing -= 1;
+						}
 					} catch (InterruptedException exc) { 
 						System.out.println(exc); 
 					}
 					eastwest_sem.release();
 
-					// notify waiting west apes if east apes are not crossing
-					if(eastCrossing == 0) {
-						synchronized(_ladderToCross) {
-							_ladderToCross.notifyAll();
+					// notify waiting apes of opposite direction that apes of current direction are done crossing
+					if(_goingEast) {
+						if(eastCrossing == 0) {
+							synchronized(_ladderToCross) {
+								_ladderToCross.notifyAll();
+							}
 						}
 					}
+					else {
+						if(westCrossing == 0) {
+							synchronized(_ladderToCross) {
+								_ladderToCross.notifyAll();
+							}
+						}
 
 					return;  //  died
+					}
 				}
 			}
+			
+			/*
+			 * INVARIANT: All apes will eventually reach their endRung.
+			 * This comes from the fact that all apes will never grab rungs that are not
+			 * available (and thus will never fall) that there will never be apes coming from the 
+			 * opposite direction, and that the for() loop iterates from the startRung to endRung.
+			 */
 
 			System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " releasing " + endRung);			
 			_ladderToCross.releaseRung(endRung);
@@ -124,102 +182,52 @@ public class Ape extends Thread {
 			// free up the released rung
 			rungs_sem[endRung].release();
 
+			
+			/*
+			 * INVARIANT: Only 1 ape will be able to decrement the number of apes on the ladder at once.
+			 * This is guaranteed via semaphore access to the shared variable.
+			 */
+			
 			// decrement the number of east apes crossing
 			try {
 				// acquiring the lock 
 				eastwest_sem.acquire(); 
-				eastCrossing -= 1;
+				if(_goingEast) {
+					eastCrossing -= 1;
+				}
+				else {
+					westCrossing -= 1;
+				}
 			} catch (InterruptedException exc) { 
 				System.out.println(exc); 
 			}
 			eastwest_sem.release();
 
+			
+			/*
+			 * INVARIANT: All waiting apes that wish to travel the opposite direction will eventually be able to do so.
+			 * This comes from the fact that all east apes will eventually finish crossing (see the invariants above).
+			 */
+			
 			// notify waiting west apes if east apes are done crossing
-			if(eastCrossing == 0) {
-				synchronized(_ladderToCross) {
-					_ladderToCross.notifyAll();
+			if(_goingEast) {
+				if(eastCrossing == 0) {
+					synchronized(_ladderToCross) {
+						_ladderToCross.notifyAll();
+					}
+				}
+			}
+			else {
+				if(westCrossing == 0) {
+					synchronized(_ladderToCross) {
+						_ladderToCross.notifyAll();
+					}
 				}
 			}
 
 			return; //survived!
 		} 
-		else if(!(_goingEast)) { //if it is an west ape and there are no apes crossing east
-			for (int i = startRung+move; i!=endRung+move; i+=move) {
-				System.out.println("\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " wants rung " + i);	
-				
-				// check if the rung can be grabbed (that there is no ape on the next rung)
-				try {
-					rungs_sem[i].acquire();
 
-					// if the next rung is empty, grab that rung
-					System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + "  got  " + i + " releasing " + (i-move));			
-					_ladderToCross.releaseRung(i-move);
-
-					// release the lock on the previous rung
-					rungs_sem[i-move].release();
-				} catch (InterruptedException exc) { 
-					System.out.println(exc); 
-				}	
-
-				// the rung can't be grabbed, so the ape falls (assumes the above fails)
-				if (!_ladderToCross.grabRung(i)) {
-					System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + ": AAaaaaaah!  falling off the ladder :-(");
-					System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " has been eaten by the crocodiles!");
-					_ladderToCross.releaseRung(i-move); /// so far, we have no way to wait, so release the old lock as we die :-(
-
-					// release the lock that was dropped from
-					rungs_sem[i].release();
-
-					// decrement the number of west apes crossing
-					try {
-						// acquiring the lock 
-						eastwest_sem.acquire(); 
-						westCrossing -= 1;
-					} catch (InterruptedException exc) { 
-						System.out.println(exc); 
-					}
-					eastwest_sem.release();
-
-					// notify waiting east apes if west apes are done crossing
-					if(westCrossing == 0) {
-						synchronized(_ladderToCross) {
-							_ladderToCross.notifyAll();
-						}
-					}
-
-					return;  //  died
-				}
-			}		
-
-			System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " releasing " + endRung);			
-			_ladderToCross.releaseRung(endRung);
-			System.out.println("\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t**APE " + _name + " FINISHED GOING " + (_goingEast?"EAST":"WEST") + "**\n");
-
-			// free up the released rung
-			rungs_sem[endRung].release();
-
-			// decrement the number of west apes crossing
-			try {
-				// acquiring the lock 
-				eastwest_sem.acquire(); 
-				westCrossing -= 1;
-			} catch (InterruptedException exc) { 
-				System.out.println(exc); 
-			}
-			eastwest_sem.release();
-
-			// notify waiting east apes if west apes are done crossing
-			if(westCrossing == 0) {
-				synchronized(_ladderToCross) {
-					_ladderToCross.notifyAll();
-				}
-			}
-
-			return; //survived!
-		}
-	}
-
-	
 
 	public  void run() {
 		System.out.println("Ape " + _name + " wants to cross the ladder.");
