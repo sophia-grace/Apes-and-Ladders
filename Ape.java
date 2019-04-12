@@ -44,7 +44,19 @@ public class Ape extends Thread {
 	}
 
 	public void crossLadder(Thread currentApe) {
+		
+		/*
+		 * INVARIANT: Only apes going the same direction will ever be in this function at the same time.
+		 * See logic presented in the run() method for more details.
+		 * However, this function supports either direction via if statements.
+		 */
+		
 		int startRung, move, endRung;
+		
+		/*
+		 * INVARIANT: East apes will go east and west apes will go west.
+		 * This is ensured through the following if/else statements.
+		 */
 		
 		if(_goingEast) {
 			startRung = 0;
@@ -75,166 +87,196 @@ public class Ape extends Thread {
 
 		System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + "  got  rung " + startRung);
 
-			/*
-			 * INVARIANT: the ape will finish crossing the ladder.
-			 * This logic comes from the for loop going from the startRung to the endRung, 
-			 * combined with the logic presented below about the rungs semaphore.
-			 */
+		/*
+		 * INVARIANT: All apes will finish crossing the ladder.
+		 * This logic comes from the for loop going from the startRung to the endRung, 
+		 * combined with the logic presented below about the rungs semaphore, as well as
+		 * the logic that all apes on the ladder at once are traveling the same direction.
+		 */
 			
 		for (int i = startRung+move; i!=endRung+move; i+=move) {
-				System.out.println("\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " wants rung " + i);	
+			System.out.println("\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " wants rung " + i);	
 
-				// check if the rung can be grabbed (that there is no ape on the next rung)
-				try {
-					
-					/*
-					 * INVARIANT: only 1 ape is on a given rung at a time.
-					 * Apes will wait until the next rung they want is free (given by the semaphore).
-					 * Apes will eventually get that rung (see the next invariant).
-					 */
-					
-					/*
-					 * INVARIANT: The first ape crossing will always have available its next rung.
-					 * This logic comes from the invariant that apes traveling opposing directions
-					 * will never be on the ladder at the same time (see invariants in the run() method).
-					 */
-					
-					rungs_sem[i].acquire();
-
-					// if the next rung is empty, grab that rung
-					System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + "  got  " + i + " releasing " + (i-move));			
-					_ladderToCross.releaseRung(i-move);
-
-					
-					/* 
-					 * INVARIANT: Apes that want a rung that is busy will eventually get that rung.
-					 * Once an ape has moved to its next rung, it always releases the previous,
-					 * allowing apes waiting to access that rung to gain access to it via its semaphore.
-					 */
-					
-					// release the lock on the previous rung
-					rungs_sem[i-move].release();
-				} catch (InterruptedException exc) { 
-					System.out.println(exc); 
-				}	
-				
+			// check if the rung can be grabbed (that there is no ape on the next rung)
+			try {
 				
 				/*
-				 * INVARIANT: This section of code (the following if statement) will never be needed.
-				 * From the invariants above, apes will always wait to grab the next rung until it is actually free.
+				 * INVARIANT: only 1 ape is on a given rung at a time.
+				 * Apes will wait until the next rung they want is free (given by the semaphore).
+				 * Apes will eventually get that rung (see the invariant 2 below this one).
 				 */
 				
-				// the rung can't be grabbed, so the ape falls (assumes the above fails)
-				if (!_ladderToCross.grabRung(i)) {
-					System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + ": AAaaaaaah!  falling off the ladder :-(");
-					System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " has been eaten by the crocodiles!");
-					_ladderToCross.releaseRung(i-move); /// so far, we have no way to wait, so release the old lock as we die :-(
+				/*
+				 * INVARIANT: The first ape crossing will always have available its next rung.
+				 * This logic comes from the invariant that apes traveling opposing directions
+				 * will never be on the ladder at the same time (see invariants in the run() method).
+				 */
+				
+				rungs_sem[i].acquire();
 
-					// release the lock that was dropped from
-					rungs_sem[i].release();
+				// if the next rung is empty, grab that rung
+				System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + "  got  " + i + " releasing " + (i-move));			
+				_ladderToCross.releaseRung(i-move);
 
-					// decrement the number of east apes crossing
-					try {
-						// acquiring the lock 
-						eastwest_sem.acquire(); 
-						if(_goingEast) {
-							eastCrossing -= 1;
-						}
-						else {
-							westCrossing -= 1;
-						}
-					} catch (InterruptedException exc) { 
-						System.out.println(exc); 
-					}
-					eastwest_sem.release();
-
-					// notify waiting apes of opposite direction that apes of current direction are done crossing
-					if(_goingEast) {
-						if(eastCrossing == 0) {
-							synchronized(_ladderToCross) {
-								_ladderToCross.notifyAll();
-							}
-						}
-					}
-					else {
-						if(westCrossing == 0) {
-							synchronized(_ladderToCross) {
-								_ladderToCross.notifyAll();
-							}
-						}
-
-					return;  //  died
-					}
-				}
-			}
-			
-			/*
-			 * INVARIANT: All apes will eventually reach their endRung.
-			 * This comes from the fact that all apes will never grab rungs that are not
-			 * available (and thus will never fall) that there will never be apes coming from the 
-			 * opposite direction, and that the for() loop iterates from the startRung to endRung.
-			 */
-
-			System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " releasing " + endRung);			
-			_ladderToCross.releaseRung(endRung);
-			System.out.println("\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t**APE " + _name + " FINISHED GOING " + (_goingEast?"EAST":"WEST") + "**\n");			
-
-			// free up the released rung
-			rungs_sem[endRung].release();
-
-			
-			/*
-			 * INVARIANT: Only 1 ape will be able to decrement the number of apes on the ladder at once.
-			 * This is guaranteed via semaphore access to the shared variable.
-			 */
-			
-			// decrement the number of east apes crossing
-			try {
-				// acquiring the lock 
-				eastwest_sem.acquire(); 
-				if(_goingEast) {
-					eastCrossing -= 1;
-				}
-				else {
-					westCrossing -= 1;
-				}
+				
+				/* 
+				 * INVARIANT: Apes that want a rung that is busy will eventually get that rung.
+				 * Once an ape has moved to its next rung (guaranteed by the above logic), it always releases the previous,
+				 * allowing apes waiting to access that rung to gain access to it via its semaphore.
+				 */
+				
+				// release the lock on the previous rung
+				rungs_sem[i-move].release();
 			} catch (InterruptedException exc) { 
 				System.out.println(exc); 
-			}
-			eastwest_sem.release();
-
+			}	
+			
 			
 			/*
-			 * INVARIANT: All waiting apes that wish to travel the opposite direction will eventually be able to do so.
-			 * This comes from the fact that all east apes will eventually finish crossing (see the invariants above).
+			 * INVARIANT: This section of code (the following if statement) will never be needed.
+			 * From the invariants above, apes will always wait to grab the next rung until it is actually free.
 			 */
 			
-			// notify waiting west apes if east apes are done crossing
-			if(_goingEast) {
-				if(eastCrossing == 0) {
-					synchronized(_ladderToCross) {
-						_ladderToCross.notifyAll();
+			// the rung can't be grabbed, so the ape falls (assumes the above fails)
+			if (!_ladderToCross.grabRung(i)) {
+				System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + ": AAaaaaaah!  falling off the ladder :-(");
+				System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " has been eaten by the crocodiles!");
+				_ladderToCross.releaseRung(i-move); /// so far, we have no way to wait, so release the old lock as we die :-(
+
+				// release the lock that was dropped from
+				rungs_sem[i].release();
+
+				// decrement the number of east apes crossing
+				try {
+					// acquiring the lock 
+					eastwest_sem.acquire(); 
+					if(_goingEast) {
+						eastCrossing -= 1;
+					}
+					else {
+						westCrossing -= 1;
+					}
+				} catch (InterruptedException exc) { 
+					System.out.println(exc); 
+				}
+				eastwest_sem.release();
+
+				// notify waiting apes of opposite direction that apes of current direction are done crossing
+				if(_goingEast) {
+					if(eastCrossing == 0) {
+						synchronized(_ladderToCross) {
+							_ladderToCross.notifyAll();
+						}
 					}
 				}
+				else {
+					if(westCrossing == 0) {
+						synchronized(_ladderToCross) {
+							_ladderToCross.notifyAll();
+						}
+					}
+
+				return;  //  died
+				}
+			}
+		}
+			
+		/*
+		 * INVARIANT: All apes will eventually reach their endRung.
+		 * This comes from the fact that all apes will never grab rungs that are not
+		 * available (and thus will never fall) that there will never be apes coming from the 
+		 * opposite direction, and that the for() loop iterates from the startRung to endRung.
+		 * (Also from the the fact that the endRung is always released once it is grabbed)
+		 */
+
+		System.out.println("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tApe " + _name + " releasing " + endRung);			
+		_ladderToCross.releaseRung(endRung);
+		System.out.println("\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t**APE " + _name + " FINISHED GOING " + (_goingEast?"EAST":"WEST") + "**\n");			
+
+		// free up the released rung
+		rungs_sem[endRung].release();
+
+		
+		/*
+		 * INVARIANT: Only 1 ape will be able to decrement the number of apes on the ladder at once.
+		 * This is guaranteed via semaphore access to the shared variable.
+		 * All apes that wish to decrement the number of apes on the ladder will eventually be able to,
+		 * since the semaphore is always released after an ape has used it.
+		 */
+		
+		// decrement the number of apes crossing the current ape's direction
+		try {
+			// acquiring the lock 
+			eastwest_sem.acquire(); 
+			if(_goingEast) {
+				eastCrossing -= 1;
 			}
 			else {
-				if(westCrossing == 0) {
-					synchronized(_ladderToCross) {
-						_ladderToCross.notifyAll();
-					}
+				westCrossing -= 1;
+			}
+		} catch (InterruptedException exc) { 
+			System.out.println(exc); 
+		}
+		eastwest_sem.release();
+		
+		/*
+		 * INVARIANT: All waiting apes that wish to travel the opposite direction will eventually be able to do so.
+		 * This comes from the fact that all apes will eventually finish crossing (see the invariants above),
+		 * making the number of apes crossing that direction eventually equal 0. Thus, the apes that are waiting will be notified
+		 * once this occurs.
+		 */
+		
+		// notify waiting apes of the opposite direction that opposing apes are done crossing
+		if(_goingEast) {
+			if(eastCrossing == 0) {
+				synchronized(_ladderToCross) {
+					_ladderToCross.notifyAll();
 				}
 			}
+		}
+		else {
+			if(westCrossing == 0) {
+				synchronized(_ladderToCross) {
+					_ladderToCross.notifyAll();
+				}
+			}
+		}
 
-			return; //survived!
-		} 
+		return; //survived!
+	} 
 
 
 	public  void run() {
+		
+		/*
+		 * INVARIANT: All apes will eventually want to cross the ladder.
+		 * This comes from invariants presented in the Jungle.java file.
+		 */
+		
 		System.out.println("Ape " + _name + " wants to cross the ladder.");
+		
+		/*
+		 * INVARIANT: Only apes going the same direction will ever be on the ladder
+		 * at the same time. This comes from the following code in which apes wait
+		 * if the number of apes currently crossing the ladder in the opposite direction
+		 * is > 0. Since the following code is in a synchronized block, only 1 thread at a time
+		 * will be able to check if it is safe to start crossing. Thus, it cannot be that
+		 * 2 threads check simultaneously, both see that the number of threads traveling the
+		 * opposite direction is 0, then both proceed to cross the ladder (resulting in deadlock).
+		 * By extension, it will never be that the number of east AND west apes crossing > 0 
+		 * (also resulting in deadlock).
+		 */
+		
+		/*
+		 * INVARIANT: Threads that are meant to wait because threads of the opposite
+		 * direction are currently crossing will eventually be notified and get to cross, no
+		 * threads will be waiting forever.
+		 * See the invariants in the crossLadder() method for more details.
+		 */
 
 		// check first if there are apes going the opposite direction
 		synchronized(_ladderToCross) {
-		if(_goingEast) {
+			if(_goingEast) {
 				while(westCrossing > 0) { // there are west apes crossing, so east apes wait
 					System.out.println("\t\t\t\t\tAPE " + _name + " DENIED ACCESS TO THE LADDER.");
 					try {
@@ -244,8 +286,8 @@ public class Ape extends Thread {
 					}
 				}
 			}
-		else {
-			//synchronized(_ladderToCross) {
+			else {
+				//synchronized(_ladderToCross) {
 				while(eastCrossing > 0) { // there are east apes crossing, so west apes wait
 					System.out.println("\t\t\t\t\tAPE " + _name + " DENIED ACCESS TO THE LADDER.");
 					try {
@@ -256,6 +298,12 @@ public class Ape extends Thread {
 				}
 			}
 		}
+		
+		/*
+		 * INVARIANT: Only 1 thread at a time is able to modify the eastCrossing and westCrossing
+		 * variables. But, all threads that want to will eventually be able to.
+		 * This is ensured via semaphore.
+		 */
 		
 		// given permission, so then start crossing
 		// first, increment the number of apes going in that direction (for use in the previous check)
