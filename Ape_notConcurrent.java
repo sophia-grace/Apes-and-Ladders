@@ -32,6 +32,12 @@ public class Ape_notConcurrent extends Thread {
 		
 		System.out.println("Ape " + _name + " wants to start crossing.");
 		
+		/*
+		 * INVARIANT: Only 1 ape will cross the ladder at a time.
+		 * This is ensured via semaphore access. The semaphore is only
+		 * released once the ape has finished crossing the ladder.
+		 */
+		
 		try {
 			ladder.acquire();
 		} catch (InterruptedException exc) { 
@@ -84,6 +90,13 @@ public class Ape_notConcurrent extends Thread {
 		
 		System.out.println("Ape " + _name + " finished going " + (_goingEast?"East.":"West."));
 	
+		
+		/* 
+		 * INVARIANT: All apes that want to cross will eventually be able to.
+		 * This is guaranteed because all apes always release the semaphore that blocks
+		 * ladder access once they have finished crossing.
+		 */
+		
 		ladder.release();
 		
 		return;  // survived!
