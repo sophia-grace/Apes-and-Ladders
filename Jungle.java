@@ -7,6 +7,7 @@
  */
 package jungle;
 import java.util.concurrent.*;
+import java.util.Random;
 
 /**
  * @author davew
@@ -27,12 +28,12 @@ public class Jungle {
 		//    timing configuration should work, and there should be no way to
 		//    add spurious "tryToSleep"'s *anywhere* to mess it up.
 		//
-		int    eastBound = 3; // how many apes going East? use -1 for inifinity
-		int    westBound = 3; // how many apes going West? use -1 for inifinity
+		int    eastBound = 2; // how many apes going East? use -1 for inifinity
+		int    westBound = 2; // how many apes going West? use -1 for inifinity
 		
 		
 		// create a Ladder
-		Ladder l = new Ladder(4);
+		Ladder l = new Ladder(10);
 		
 		// creating a Semaphore object for east vs west
         // with number of permits 1 
@@ -46,30 +47,56 @@ public class Jungle {
 		}
 		
 		
-		// create some Eastbound apes who want that ladder
-		int nRemaining = eastBound;
-		int apeCounter = 1;
-		while (nRemaining != 0) {
-			Ape a = new Ape("E-" + apeCounter, l,true, eastwest_sem, rungs_sem);
-			a.start();
-			apeCounter++;
-			
-			if (nRemaining > 0)
-				nRemaining--;
+		int i;
+		if(eastBound > westBound) {
+			i = westBound;
 		}
-
-	
-				
-		// and create some Westbound apes who want the SAME ladder
-		nRemaining = westBound;
-		apeCounter=1;
-		while (nRemaining != 0) {
-			Ape a = new Ape("W-"+ apeCounter, l,false, eastwest_sem, rungs_sem);
-			a.start();
-			apeCounter++;
-			
-			if (nRemaining > 0)
-				nRemaining--;
+		else {
+			i = eastBound;
 		} 
+		
+		// create instance of Random class 
+        Random rand = new Random();
+		
+		// start all of the apes
+		int k = 1;
+		for(; k < i + 1; k++) {
+			Ape east = new Ape("E-" + k, l,true, eastwest_sem, rungs_sem);
+			Ape west = new Ape("W-"+ k, l,false, eastwest_sem, rungs_sem);
+	
+			int random = rand.nextInt(2);
+			
+			if(random == 0) { // if random number is 0, start east ape first
+				east.start();
+				west.start();
+			}
+			else { // if random number is not 0, start west ape first
+				west.start();
+				east.start();
+			}
+		}
+		// start all of the remaining apes (this case occurs if eastBound != westBound)
+		int difference = Math.abs(eastBound - westBound);
+		if(westBound < eastBound) { // if there are more west apes, start the rest of them
+			for(int j = 0; j < difference; j++) { 
+				Ape east = new Ape("E-"+ k, l,true, eastwest_sem, rungs_sem);
+				east.start();
+				k++;
+			}
+		} 
+		else if(westBound > eastBound) { // if there are more west apes, start the rest of them
+			for(int j = 0; j < difference; j++) { 
+				Ape west = new Ape("W-"+ k, l,false, eastwest_sem, rungs_sem);
+				west.start();
+				k++;
+			}
+		} 
+		
+
+		//long endTime = System.nanoTime();
+
+	//	long duration = (endTime - startTime);  //divide by 1000000 to get milliseconds.
+	//	System.out.println("Duration of execution Concurrent (millis): " + duration);
 	}
+	
 }
