@@ -1,12 +1,12 @@
 // NAME: Sophia Trump
 
 
-package jungle;
+package jungle_notConcurrent;
 import java.util.concurrent.*;
 import java.util.Random;
 
 
-public class Jungle {	
+public class Jungle_notConcurrent {	
 	public static void main(String[] args) {
 		long startTime = System.nanoTime();
 		
@@ -21,7 +21,7 @@ public class Jungle {
 		int    westBound = 50; // how many apes going West?
 		
 		// create a Ladder
-		Ladder l = new Ladder(10);
+		Ladder_notConcurrent l = new Ladder_notConcurrent(10);
 		
 		// creating a Semaphore object for east vs west
         // with number of permits 1 
@@ -60,8 +60,8 @@ public class Jungle {
 		// start all of the apes
 		int k = 1;
 		for(; k < i + 1; k++) {
-			Ape east = new Ape("E-" + k, l,true, eastwest_sem, rungs_sem);
-			Ape west = new Ape("W-"+ k, l,false, eastwest_sem, rungs_sem);
+			Ape_notConcurrent east = new Ape_notConcurrent("E-" + k, l,true);
+			Ape_notConcurrent west = new Ape_notConcurrent("W-"+ k, l,false);
 	
 			int random = rand.nextInt(2);
 			
@@ -85,14 +85,14 @@ public class Jungle {
 		int difference = Math.abs(eastBound - westBound);
 		if(westBound < eastBound) { // if there are more west apes, start the rest of them
 			for(int j = 0; j < difference; j++) { 
-				Ape east = new Ape("E-"+ k, l,true, eastwest_sem, rungs_sem);
+				Ape_notConcurrent east = new Ape_notConcurrent("E-"+ k, l,true);
 				east.start();
 				k++;
 			}
 		} 
 		else if(westBound > eastBound) { // if there are more west apes, start the rest of them
 			for(int j = 0; j < difference; j++) { 
-				Ape west = new Ape("W-"+ k, l,false, eastwest_sem, rungs_sem);
+				Ape_notConcurrent west = new Ape_notConcurrent("W-"+ k, l,false);
 				west.start();
 				k++;
 			}
@@ -102,7 +102,7 @@ public class Jungle {
 		long endTime = System.nanoTime();
 
 		long duration = (endTime - startTime)/1000000;  //divide by 1000000 to get milliseconds.
-		System.out.println("Duration of execution Concurrent (millis): " + duration);
+		System.out.println("Duration of execution not Concurrent (millis): " + duration);
 	}
 	
 }
