@@ -1,6 +1,5 @@
 // NAME: Sophia Trump
 
-
 /* 
  * Resources used:
  * https://docs.oracle.com/javase/7/docs/api/java/util/concurrent/Semaphore.html
@@ -12,14 +11,13 @@
 
 /*
 *Created on Feb 12, 2005
+*Last modified: 12 April 2019
  */
 
 package jungle;
 import java.util.concurrent.*;
 
 /*
- * @author davew
- *
  * The Ape class is a kind of thread,
  *  since all Apes can go about their activities concurrently
  * Note that each Ape has his or her own name and direction,
