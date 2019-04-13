@@ -13,9 +13,9 @@ In Eclipse, create a new project called "apes-and-ladders". Create a package "ju
 In Eclipse, create a new project called "apes-and-ladders-notConcurrent". Create a package "jungle_notConcurrent". Put the three .java files (Ape_notConcurrent.java, Jungle_notConcurrent.java, and Ladder_notConcurrent.java) in this package.
 
 ## The meaning of the output
-For the concurrent version, the output is formatted such that time increases from left to right, top to bottom (such that the bottom right output occurred last).
+For the concurrent version, the output is formatted such that time increases from left to right, top to bottom (such that the bottom right output occurred last). Below is a sample output from the concurrent version.
 
-![alt text](https://github.com/sophia-grace/Apes-and-Ladders/concurrent_sample_output.png)
+![alt text](https://github.com/sophia-grace/Apes-and-Ladders/blob/master/concurrent_sample_output.png)
 
 ## Efficiency comparison for the concurrent and not concurrent versions
 The concurrent version is more efficient than the not concurrent version, as expected. In the worst case, the concurrent version would perform as efficiently as the not concurrent version (in the case that east and west apes perfectly alternate in gaining access to the ladder. This is equivalent to the not concurrent version because it eliminates apes of the same direction being able to cross simultaneously.). This explains some of the variation in execution time of the concurrent program (since the precise order in which access is requested is undetermined).
