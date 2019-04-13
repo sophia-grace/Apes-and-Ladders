@@ -13,7 +13,7 @@ In Eclipse, create a new project called "apes-and-ladders". Create a package "ju
 In Eclipse, create a new project called "apes-and-ladders-notConcurrent". Create a package "jungle_notConcurrent". Put the three .java files (Ape_notConcurrent.java, Jungle_notConcurrent.java, and Ladder_notConcurrent.java) in this package.
 
 ## The meaning of the output
-For the concurrent version, the output is formatted such that time increases from left to right, top to bottom (such that the bottom right output occurred last). Below is a sample output from the concurrent version.
+For the concurrent version, the output is formatted such that time increases from left to right, top to bottom (such that the bottom right output occurred last). Below is a the beginning few lines of a sample output from the concurrent version.
 
 ![alt text](https://github.com/sophia-grace/Apes-and-Ladders/blob/master/concurrent_sample_output.png)
 
