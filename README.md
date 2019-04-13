@@ -3,7 +3,7 @@ Simulates a set of apes (as threads) that cross a gorge using the rungs of a sin
 
 See the repository on github: https://github.com/sophia-grace/Apes-and-Ladders/
 
-## How to run:
+## How to run
 This program uses Eclipse to run. 
 
 ### To run the concurrent version:
