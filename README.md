@@ -13,7 +13,7 @@ In Eclipse, create a new project called "apes-and-ladders". Create a package "ju
 This version is not concurrent in the sense that only 1 ape is allowed to cross the ladder at a time (the program does run concurrent threads, but the ladder is mutually exclusive). In Eclipse, create a new project called "apes-and-ladders-notConcurrent". Create a package "jungle_notConcurrent". Put the three .java files (Ape_notConcurrent.java, Jungle_notConcurrent.java, and Ladder_notConcurrent.java) in this package.
 
 ## The meaning of the output
-For the concurrent version, the output is formatted such that time increases from left to right, top to bottom (such that the bottom right output occurred last). Below is the beginning few lines of a sample output from the concurrent version.
+For the concurrent version, the output is formatted such that time increases from left to right, top to bottom (such that the bottom right output occurred last). Below is the beginning few lines of a sample output from the concurrent version. Ape E-1 means it is Ape 1 of Apes heading east, and Ape W-7 means it is Ape 7 of Apes heading west.
 
 ![alt text](https://github.com/sophia-grace/Apes-and-Ladders/blob/master/concurrent_sample_output.png)
 
